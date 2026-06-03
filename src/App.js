@@ -237,7 +237,7 @@ const Sidebar=({tab,go})=>(
   <div style={{width:220,flexShrink:0,background:C.sidebar,height:"100vh",position:"sticky",top:0,display:"flex",flexDirection:"column",overflowY:"auto"}}>
     <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
       <div style={{width:36,height:36,background:C.brand,borderRadius:C.r,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:10}}>⚕️</div>
-      <div style={{color:"#fff",fontWeight:700,fontSize:14}}>PhysioClinic</div>
+      <div style={{color:"#fff",fontWeight:700,fontSize:14}}>Nexoraacare</div>
       <div style={{color:"rgba(255,255,255,.4)",fontSize:11,marginTop:2}}>Admin Dashboard</div>
     </div>
     <div style={{padding:"10px 8px",flex:1}}>
@@ -249,7 +249,7 @@ const Sidebar=({tab,go})=>(
       })}
     </div>
     <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.07)"}}>
-      <div style={{fontSize:11,color:"rgba(255,255,255,.3)"}}>PhysioDesk v2.0</div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.3)"}}>Nexoraacare v2.0</div>
     </div>
   </div>
 );
@@ -527,7 +527,7 @@ export default function App(){
   const date=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
 
   // ── HOME ──────────────────────────────────────────────────────────
-  if(tab==="home"&&!screen) return <Shell hdr={<TopBar title="PhysioClinic" sub={date} right={<RefBtn onClick={load} label={refresh||"Live"}/>}/>}>
+  if(tab==="home"&&!screen) return <Shell hdr={<TopBar title="Nexoraacare" sub={date} right={<RefBtn onClick={load} label={refresh||"Live"}/>}/>}>
     {loading?<Spin/>:<>
       <div className={isDesktop?"grid4":"grid2"} style={{marginBottom:14}}>
         <SC label="Today" value={todayA.length} sub="appointments" icon="📅" color={C.brand}/>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { validateForm } from "./validators.frontend";
 
 // ── TOKENS ───────────────────────────────────────────────────────────
 const C = {
@@ -284,6 +285,20 @@ const RefBtn=({onClick,label})=>(
 );
 
 // ── MAIN APP ──────────────────────────────────────────────────────────
+const Shell=({children,hdr,isDesktop,tab,go})=>(
+  <div style={{display:"flex",minHeight:"100vh",background:C.bg}}>
+    <style>{css}</style>
+    {isDesktop&&<Sidebar tab={tab} go={go}/>}
+    <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,maxWidth:isDesktop?"none":"100%"}}>
+      {hdr}
+      <div style={{padding:isDesktop?"20px 24px":"12px 14px",paddingBottom:isDesktop?"20px":"82px",flex:1,overflowY:"auto"}}>
+        {children}
+      </div>
+    </div>
+    {!isDesktop&&<BottomNav tab={tab} go={go}/>}
+  </div>
+);
+
 export default function App(){
   const w = useW();
   const isDesktop = w >= 1024;
@@ -410,10 +425,13 @@ export default function App(){
   };
 
   const saveAppt=async()=>{
+    const apptErrs=validateForm({date:na.date,time:na.time});
+    if(Object.keys(apptErrs).length){alert(Object.values(apptErrs)[0]);return;}
     try{
       let patientId="",patientName="",patientPhone="";
       if(patMode==="new"){
-        if(!nap.name||!nap.phone){alert("Patient name and phone required.");return;}
+        const patErrs=validateForm({name:nap.name,phone:nap.phone});
+        if(Object.keys(patErrs).length){alert(Object.values(patErrs)[0]);return;}
         const pr=await fetch(`${API}/api/patients`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:nap.name,phone:nap.phone,condition:nap.condition})});
         const savedPat=await pr.json();
         patientId=savedPat._id;patientName=savedPat.name;patientPhone=savedPat.phone;
@@ -434,7 +452,8 @@ export default function App(){
   };
 
   const savePat=async()=>{
-    if(!np.name||!np.phone){alert("Name and phone required.");return;}
+    const errs=validateForm({name:np.name,phone:np.phone,email:np.email});
+    if(Object.keys(errs).length){alert(Object.values(errs)[0]);return;}
     try{
       const r=await fetch(`${API}/api/patients`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(np)});
       const saved=await r.json();
@@ -510,24 +529,10 @@ export default function App(){
   },[appts,earningDoc,earningPeriod]);
 
   // ── SHELL ──────────────────────────────────────────────────────────
-  const Shell=({children,hdr})=>(
-    <div style={{display:"flex",minHeight:"100vh",background:C.bg}}>
-      <style>{css}</style>
-      {isDesktop&&<Sidebar tab={tab} go={go}/>}
-      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,maxWidth:isDesktop?"none":"100%"}}>
-        {hdr}
-        <div style={{padding:isDesktop?"20px 24px":"12px 14px",paddingBottom:isDesktop?"20px":"82px",flex:1,overflowY:"auto"}}>
-          {children}
-        </div>
-      </div>
-      {!isDesktop&&<BottomNav tab={tab} go={go}/>}
-    </div>
-  );
-
   const date=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
 
   // ── HOME ──────────────────────────────────────────────────────────
-  if(tab==="home"&&!screen) return <Shell hdr={<TopBar title="Nexoraacare" sub={date} right={<RefBtn onClick={load} label={refresh||"Live"}/>}/>}>
+  if(tab==="home"&&!screen) return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Nexoraacare" sub={date} right={<RefBtn onClick={load} label={refresh||"Live"}/>}/>}>
     {loading?<Spin/>:<>
       <div className={isDesktop?"grid4":"grid2"} style={{marginBottom:14}}>
         <SC label="Today" value={todayA.length} sub="appointments" icon="📅" color={C.brand}/>
@@ -557,7 +562,7 @@ export default function App(){
   </Shell>;
 
   // ── SCHEDULE ──────────────────────────────────────────────────────
-  if(tab==="appts"&&!screen) return <Shell hdr={<TopBar title="Schedule" sub={`${appts.length} total`} icon="📅" right={<RefBtn onClick={load} label={refresh}/>}/>}>
+  if(tab==="appts"&&!screen) return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Schedule" sub={`${appts.length} total`} icon="📅" right={<RefBtn onClick={load} label={refresh}/>}/>}>
     <Btn label="Book New Appointment" onClick={()=>setScreen("add")} icon="+" variant="dark"/>
     {/* Filters */}
     <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
@@ -576,7 +581,7 @@ export default function App(){
     </>}
   </Shell>;
 
-  if(tab==="appts"&&screen==="add") return <Shell hdr={<TopBar title="New Appointment" onBack={()=>setScreen(null)}/>}>
+  if(tab==="appts"&&screen==="add") return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="New Appointment" onBack={()=>setScreen(null)}/>}>
     <Card>
       {/* Toggle: existing vs new patient */}
       <div style={{display:"flex",background:C.bg,borderRadius:C.r,padding:3,marginBottom:14,border:`1px solid ${C.border}`}}>
@@ -614,7 +619,7 @@ export default function App(){
   </Shell>;
 
   // ── PATIENTS ──────────────────────────────────────────────────────
-  if(tab==="patients"&&!screen&&!selP) return <Shell hdr={<TopBar title="Patients" sub={`${patients.length} registered`} icon="👥" right={<RefBtn onClick={load} label={refresh}/>}/>}>
+  if(tab==="patients"&&!screen&&!selP) return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Patients" sub={`${patients.length} registered`} icon="👥" right={<RefBtn onClick={load} label={refresh}/>}/>}>
     <Btn label="Register New Patient" onClick={()=>setScreen("add")} icon="+" variant="dark"/>
     <div style={{position:"relative",marginBottom:12}}>
       <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:14,color:C.ink4,pointerEvents:"none"}}>🔍</span>
@@ -646,7 +651,7 @@ export default function App(){
     </>}
   </Shell>;
 
-  if(tab==="patients"&&screen==="add") return <Shell hdr={<TopBar title="Register Patient" onBack={()=>setScreen(null)}/>}>
+  if(tab==="patients"&&screen==="add") return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Register Patient" onBack={()=>setScreen(null)}/>}>
     <Card>
       <div className="grid2">
         <div style={{gridColumn:"1/-1"}}><Inp label="Full Name *" value={np.name} onChange={v=>setNp({...np,name:v})} placeholder="Patient's full name"/></div>
@@ -666,7 +671,7 @@ export default function App(){
   </Shell>;
 
   // ── PATIENT DETAIL ────────────────────────────────────────────────
-  if(tab==="patients"&&screen==="detail"&&selP) return <Shell hdr={<TopBar title="Patient Profile" onBack={()=>{setScreen(null);setSelP(null);setPkgs([]);}}/>}>
+  if(tab==="patients"&&screen==="detail"&&selP) return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Patient Profile" onBack={()=>{setScreen(null);setSelP(null);setPkgs([]);}}/>}>
     <Card p={0} style={{overflow:"hidden"}}>
       <div style={{background:`linear-gradient(to bottom,${C.brandXL},${C.surface})`,padding:"16px 14px 12px"}}>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
@@ -771,7 +776,7 @@ export default function App(){
     const allPaid=appts.filter(a=>a.payStatus==="paid").reduce((s,a)=>s+(a.amount||0),0);
     const allClinic=appts.filter(a=>a.payStatus==="clinic").reduce((s,a)=>s+(a.amount||0),0);
     const allPending=appts.filter(a=>a.payStatus==="pending"&&a.status!=="cancelled").reduce((s,a)=>s+(a.amount||0),0);
-    return <Shell hdr={<TopBar title="Billing & Invoices" sub="Monthly breakdown" icon="💳" right={<RefBtn onClick={load} label={refresh}/>}/>}>
+    return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Billing & Invoices" sub="Monthly breakdown" icon="💳" right={<RefBtn onClick={load} label={refresh}/>}/>}>
       {loading?<Spin/>:<>
         <div className={isDesktop?"grid4":"grid3"} style={{marginBottom:14}}>
           <SC label="Today Paid" icon="📅" value={`₹${todayPaid.toLocaleString()}`} color={C.brand}/>
@@ -823,7 +828,7 @@ export default function App(){
     const total=paid+clinic+pending;
     const[y,m]=mk.split("-");
     const mn=new Date(y,m-1).toLocaleDateString("en-IN",{month:"long",year:"numeric"});
-    return <Shell hdr={<TopBar title={mn} sub="Monthly Invoice" onBack={()=>setScreen(null)}/>}>
+    return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title={mn} sub="Monthly Invoice" onBack={()=>setScreen(null)}/>}>
       <Card p={16} style={{background:`linear-gradient(to bottom,${C.brandXL},${C.surface})`,border:`1px solid ${C.brandL}`,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <div>
@@ -883,7 +888,7 @@ export default function App(){
   }
 
   // ── EARNINGS ──────────────────────────────────────────────────────
-  if(tab==="earnings") return <Shell hdr={<TopBar title="Earnings" sub="Doctor-wise breakdown" icon="📊" right={<RefBtn onClick={load} label={refresh}/>}/>}>
+  if(tab==="earnings") return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Earnings" sub="Doctor-wise breakdown" icon="📊" right={<RefBtn onClick={load} label={refresh}/>}/>}>
     {/* Filters */}
     <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
       <div style={{flex:1,minWidth:140}}>
@@ -957,7 +962,7 @@ export default function App(){
   </Shell>;
 
   // ── FEEDBACK ──────────────────────────────────────────────────────
-  if(tab==="feedback") return <Shell hdr={<TopBar title="Patient Feedback" sub="Ratings & reviews" icon="⭐" right={<RefBtn onClick={load} label={refresh}/>}/>}>
+  if(tab==="feedback") return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Patient Feedback" sub="Ratings & reviews" icon="⭐" right={<RefBtn onClick={load} label={refresh}/>}/>}>
     {loading?<Spin/>:<>
       {feedbacks.length>0&&(()=>{
         const avg=feedbacks.reduce((s,f)=>s+(f.rating||0),0)/feedbacks.length;

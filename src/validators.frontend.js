@@ -10,7 +10,7 @@ export const DATE_REGEX  = /^\d{4}-\d{2}-\d{2}$/;
 export const TIME_REGEX  = /^([01]\d|2[0-3]):[0-5]\d$/;
 export const NAME_REGEX  = /^[A-Za-z][A-Za-z\s.'-]{1,59}$/;
 
-export const APPOINTMENT_TYPES = ['Initial Assessment','Follow-up','Walk-in Consultation','Review','Physiotherapy Session','Tele-consultation','Home Visit'];
+export const APPOINTMENT_TYPES = ['Initial Assessment','Follow-up','Physiotherapy Session','Walk-in','Review'];
 
 // Returns an error string, or "" if valid.
 export function validateField(field, value) {

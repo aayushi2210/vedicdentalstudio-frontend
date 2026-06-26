@@ -15,11 +15,11 @@ const C = {
 };
 
 const API     = "https://vedic-dental-studio-backend.onrender.com";
-const DOCS    = ["Dr.Shaily Ujjwal"];   // single dentist — apna naam yahan daalein
-const DCOL    = {"Dr.Shaily Ujjwal":C.brand};
+const DOCS    = ["Dr. Shaily Ujjwal"];   // single dentist — apna naam yahan daalein
+const DCOL    = {"Dr. Shaily Ujjwal":C.brand};
 const TIMES   = ["10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00"];
-const TYPES   = ["Consultation","Braces And Aligners","Dental Filling","Root Canal","Dental implant","Mouth Ulcer","Kids Dentistry","Wisdom Tooth Removal","Bridges And Crown"];
-const PRICES  = {"Consultation":500,"Braces And Aligners": 2000,"Dental Filling":5000,"Root Canal":5000,"Dental implant":5000,"Mouth Ulcer":5000,"Kids Dentistry":5000,"Wisdom Tooth Removal":5000,"Bridges And Crown":5000};
+const TYPES   = ["Consultation","Wisdom Tooth Removal","Dental Filling","Root Canal","Braces And Aligners","Dental Implant","Bridges And Crown","Mouth Ulcer","Kids Dentistry"];
+const PRICES  = {"Consultation":500,"Wisdom Tooth Removal":2000,"Dental Filling":3000,"Root Canal":4000,"Braces And Aligners":5000,"Dental Implant":5000,"Bridges And Crown":5000,"Mouth Ulcer":5000,"Kids Dentistry":5000};
 const TODAY   = new Date().toISOString().split("T")[0];
 const PER     = 12;
 
@@ -262,7 +262,7 @@ const navItems=[
 const Sidebar=({tab,go})=>(
   <div style={{width:220,flexShrink:0,background:C.sidebar,height:"100vh",position:"sticky",top:0,display:"flex",flexDirection:"column",overflowY:"auto"}}>
     <div style={{padding:"20px 16px 16px",borderBottom:"1px solid rgba(255,255,255,.07)"}}>
-      <div style={{width:36,height:36,background:C.brand,borderRadius:C.r,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,marginBottom:10}}>⚕️</div>
+      <img src="/logo.png" alt="Vedic Dental Studio" style={{width:48,height:48,borderRadius:"50%",marginBottom:10,objectFit:"cover"}}/>
       <div style={{color:"#fff",fontWeight:700,fontSize:14}}>Vedic Dental Studio</div>
       <div style={{color:"rgba(255,255,255,.4)",fontSize:11,marginTop:2}}>Admin Dashboard</div>
     </div>
@@ -293,9 +293,10 @@ const BottomNav=({tab,go})=>(
   </div>
 );
 
-const TopBar=({title,sub,onBack,right,icon="⚕️"})=>(
+const TopBar=({title,sub,onBack,right,icon="⚕️",logo})=>(
   <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"11px 16px",display:"flex",alignItems:"center",gap:10,position:"sticky",top:0,zIndex:50}}>
     {onBack?<button onClick={onBack} style={{width:32,height:32,background:C.bg,border:`1px solid ${C.border}`,borderRadius:C.rSm,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:C.ink2,flexShrink:0}}>‹</button>
+    :logo?<img src="/logo.png" alt="Vedic Dental Studio" style={{width:32,height:32,borderRadius:"50%",flexShrink:0,objectFit:"cover"}}/>
     :<div style={{width:30,height:30,background:C.brand,borderRadius:C.rSm,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>{icon}</div>}
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:14,fontWeight:600,color:C.ink,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{title}</div>
@@ -576,7 +577,7 @@ export default function App(){
   const date=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
 
   // ── HOME ──────────────────────────────────────────────────────────
-  if(tab==="home"&&!screen) return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Vedic Dental Studio" sub={date} right={<RefBtn onClick={load} label={refresh||"Live"}/>}/>}>
+  if(tab==="home"&&!screen) return <Shell isDesktop={isDesktop} tab={tab} go={go} hdr={<TopBar title="Vedic Dental Studio" sub={date} logo right={<RefBtn onClick={load} label={refresh||"Live"}/>}/>}>
     {loading?<Spin/>:<>
       <div className={isDesktop?"grid4":"grid2"} style={{marginBottom:14}}>
         <SC label="Today" value={todayA.length} sub="appointments" icon="📅" color={C.brand}/>

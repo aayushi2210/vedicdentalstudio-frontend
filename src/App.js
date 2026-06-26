@@ -15,11 +15,11 @@ const C = {
 };
 
 const API     = "https://vedic-dental-studio-backend.onrender.com";
-const DOCS    = ["Dr. Sharma"];   // single dentist — apna naam yahan daalein
-const DCOL    = {"Dr. Sharma":C.brand};
-const TIMES   = ["10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30"];
-const TYPES   = ["Consultation","Cleaning","Filling","Root Canal","Checkup"];
-const PRICES  = {"Consultation":1200,"Cleaning":1500,"Filling":2000,"Root Canal":5000,"Checkup":1200};
+const DOCS    = ["Dr.Shaily Ujjwal"];   // single dentist — apna naam yahan daalein
+const DCOL    = {"Dr.Shaily Ujjwal":C.brand};
+const TIMES   = ["10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00"];
+const TYPES   = ["Consultation","Braces And Aligners","Dental Filling","Root Canal","Dental implant","Mouth Ulcer","Kids Dentistry","Wisdom Tooth Removal","Bridges And Crown"];
+const PRICES  = {"Consultation":500,"Braces And Aligners": 2000,"Dental Filling":5000,"Root Canal":5000,"Dental implant":5000,"Mouth Ulcer":5000,"Kids Dentistry":5000,"Wisdom Tooth Removal":5000,"Bridges And Crown":5000};
 const TODAY   = new Date().toISOString().split("T")[0];
 const PER     = 12;
 

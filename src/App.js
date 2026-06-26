@@ -14,7 +14,7 @@ const C = {
   r:"10px",rSm:"6px",rFull:"9999px",
 };
 
-const API     = "https://vedic-dental-studio-backend.onrender.com";
+const API     = "https://physioclinic-whatsapp-bot.onrender.com";
 const DOCS    = ["Dr. Shaily Ujjwal"];   // single dentist — apna naam yahan daalein
 const DCOL    = {"Dr. Shaily Ujjwal":C.brand};
 const TIMES   = ["10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30","20:00"];

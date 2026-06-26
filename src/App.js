@@ -108,7 +108,7 @@ const SC=({label,value,sub,icon,color=C.brand})=>(
 );
 
 // Monthly trend bar chart (#14) — no external library
-/**const Trend=({title,data,valueKey,color=C.brand,money})=>{
+const Trend=({title,data,valueKey,color=C.brand,money})=>{
   const max=Math.max(1,...data.map(d=>d[valueKey]||0));
   const W=520,H=160,pad=26,bw=data.length?(W-pad*2)/data.length:0;
   const fmt=v=>money?`₹${(v/1000).toFixed(v>=1000?1:0)}${v>=1000?"k":""}`:v;
@@ -191,7 +191,6 @@ const Spin=()=>(
 const Empty=({msg="No data found"})=>(
   <div style={{textAlign:"center",padding:"28px 0",color:C.ink4,fontSize:12}}>{msg}</div>
 );
-**/
 // ── PAGINATION ────────────────────────────────────────────────────────
 const Paginator=({page,total,perPage,onChange})=>{
   const pages=Math.ceil(total/perPage);

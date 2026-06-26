@@ -1,6 +1,6 @@
 {
-  "short_name": "NexoraaCare",
-  "name": "NexoraaCare",
+  "short_name": "Vedic Dental",
+  "name": "Vedic Dental Studio",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
+  "theme_color": "#F5C842",
   "background_color": "#ffffff"
 }

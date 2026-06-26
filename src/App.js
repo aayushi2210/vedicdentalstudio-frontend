@@ -106,7 +106,37 @@ const SC=({label,value,sub,icon,color=C.brand})=>(
     {sub&&<div style={{fontSize:11,color:C.ink4,marginTop:2}}>{sub}</div>}
   </div>
 );
-
+// ── APPOINTMENT CARD ──────────────────────────────────────────────────
+const ACard=({a,onMarkPaid})=>{
+  const cancelled=a.status==="cancelled";
+  const dc=DCOL[a.therapist]||C.brand;
+  return (
+    <Card style={{borderLeft:`2.5px solid ${cancelled?C.red:dc}`,opacity:cancelled?.6:1}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{textAlign:"center",minWidth:42,flexShrink:0}}>
+          <div style={{fontSize:13,fontWeight:600,color:C.ink}}>{a.time}</div>
+          <div style={{fontSize:9,color:C.ink4,marginTop:1}}>{a.date?.slice(5)}</div>
+        </div>
+        <div style={{width:1,height:32,background:C.border,flexShrink:0}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:13,fontWeight:600,color:C.ink,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",textDecoration:cancelled?"line-through":"none"}}>{a.patientName||"Unknown"}</div>
+          <div style={{fontSize:11,color:C.ink3,marginTop:2}}>{a.type} · <span style={{color:dc,fontWeight:500}}>{a.therapist}</span></div>
+          {a.mode==="video"&&a.videoLink&&<a href={a.videoLink} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:3,fontSize:10,color:C.brandD,fontWeight:600,textDecoration:"none"}}>🎥 Join video</a>}
+        </div>
+        <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
+          {cancelled?sPill("cancelled"):sPill(a.payStatus==="paid"?"paid":a.payStatus==="clinic"?"clinic":"pending")}
+          <span style={{fontSize:12,fontWeight:600,color:C.ink}}>₹{(a.amount||0).toLocaleString()}</span>
+          {!cancelled&&a.payStatus!=="paid"&&onMarkPaid&&(
+            <button onClick={e=>{e.stopPropagation();onMarkPaid(a._id);}}
+              style={{background:C.greenL,color:C.greenD,border:"none",borderRadius:C.rSm,padding:"3px 9px",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:2}}>
+              Mark Paid
+            </button>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+};
 // Monthly trend bar chart (#14) — no external library
 const Trend=({title,data,valueKey,color=C.brand,money})=>{
   const max=Math.max(1,...data.map(d=>d[valueKey]||0));
@@ -215,39 +245,6 @@ const Paginator=({page,total,perPage,onChange})=>{
     </div>
   );
 };
-
-// ── APPOINTMENT CARD ──────────────────────────────────────────────────
-const ACard=({a,onMarkPaid})=>{
-  const cancelled=a.status==="cancelled";
-  const dc=DCOL[a.therapist]||C.brand;
-  return (
-    <Card style={{borderLeft:`2.5px solid ${cancelled?C.red:dc}`,opacity:cancelled?.6:1}}>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{textAlign:"center",minWidth:42,flexShrink:0}}>
-          <div style={{fontSize:13,fontWeight:600,color:C.ink}}>{a.time}</div>
-          <div style={{fontSize:9,color:C.ink4,marginTop:1}}>{a.date?.slice(5)}</div>
-        </div>
-        <div style={{width:1,height:32,background:C.border,flexShrink:0}}/>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:13,fontWeight:600,color:C.ink,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",textDecoration:cancelled?"line-through":"none"}}>{a.patientName||"Unknown"}</div>
-          <div style={{fontSize:11,color:C.ink3,marginTop:2}}>{a.type} · <span style={{color:dc,fontWeight:500}}>{a.therapist}</span></div>
-          {a.mode==="video"&&a.videoLink&&<a href={a.videoLink} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:3,fontSize:10,color:C.brandD,fontWeight:600,textDecoration:"none"}}>🎥 Join video</a>}
-        </div>
-        <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
-          {cancelled?sPill("cancelled"):sPill(a.payStatus==="paid"?"paid":a.payStatus==="clinic"?"clinic":"pending")}
-          <span style={{fontSize:12,fontWeight:600,color:C.ink}}>₹{(a.amount||0).toLocaleString()}</span>
-          {!cancelled&&a.payStatus!=="paid"&&onMarkPaid&&(
-            <button onClick={e=>{e.stopPropagation();onMarkPaid(a._id);}}
-              style={{background:C.greenL,color:C.greenD,border:"none",borderRadius:C.rSm,padding:"3px 9px",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:2}}>
-              Mark Paid
-            </button>
-          )}
-        </div>
-      </div>
-    </Card>
-  );
-};
-
 // ── LAYOUT COMPONENTS ─────────────────────────────────────────────────
 const navItems=[
   {id:"home",    icon:"🏠", label:"Home"},

@@ -324,6 +324,9 @@ export default function App(){
   const [tx,       setTx]       = useState("");
   const [savingTx, setSavingTx] = useState(false);
   const [txOk,     setTxOk]     = useState(false);
+  const [txPlanId, setTxPlanId] = useState(null);   // existing TreatmentPlan record id
+  const [templates,setTemplates]= useState([]);     // package template catalog
+  const [savingTpl,setSavingTpl]= useState(false);
   const [pkgs,     setPkgs]     = useState([]);
   const [ldPkgs,   setLdPkgs]   = useState(false);
   const [docs,     setDocs]     = useState([]);   // patient documents (#8)
@@ -368,10 +371,19 @@ export default function App(){
   };
 
   useEffect(()=>{load();},[]);
+  useEffect(()=>{(async()=>{try{const r=await fetch(`${API}/api/package-templates`);const t=await r.json();if(Array.isArray(t))setTemplates(t);}catch(e){}})();},[]);
 
   useEffect(()=>{
-    if(!selP){setPkgs([]);return;}
+    if(!selP){setPkgs([]);setTxPlanId(null);return;}
     setTx(selP.treatment||"");
+    setTxPlanId(null);
+    (async()=>{
+      try{
+        const r=await fetch(`${API}/api/treatment-plans/${selP._id}`);
+        const plans=await r.json();
+        if(Array.isArray(plans)&&plans.length){setTxPlanId(plans[0]._id);setTx(plans[0].notes||selP.treatment||"");}
+      }catch(e){}
+    })();
     (async()=>{
       setLdPkgs(true);
       try{const r=await fetch(`${API}/api/packages/${selP._id}`);setPkgs(await r.json());}
@@ -422,21 +434,49 @@ export default function App(){
     try{
       const r=await fetch(`${API}/api/packages`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...npkg,total:parseInt(npkg.total),amount:parseInt(npkg.amount)||0,done:0,active:true,patientId:selP._id,patientName:selP.name,patientPhone:selP.phone})});
       const saved=await r.json();
+      if(!r.ok||!saved._id){alert("Package save nahi hua: "+(saved.error||"server error"));return;}
       setPkgs(p=>[saved,...p]);
       setNpkg({name:"",total:"10",amount:"",therapist:DOCS[0],startDate:TODAY});
       setShowPkg(false);
-    }catch(e){alert("Error saving.");}
+    }catch(e){alert("Error saving package. Backend live hai?");}
+  };
+
+  // apply a saved package template into the Add-Package form
+  const applyTemplate=(t)=>{
+    if(!t)return;
+    setNpkg(n=>({...n,name:t.name,total:String(t.totalSessions||n.total),amount:String(t.price||"")}));
+  };
+  // save the current Add-Package form as a reusable template
+  const saveTemplate=async()=>{
+    if(!npkg.name||!npkg.total){alert("Template ke liye name aur sessions chahiye.");return;}
+    setSavingTpl(true);
+    try{
+      const r=await fetch(`${API}/api/package-templates`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:npkg.name,totalSessions:parseInt(npkg.total),price:parseInt(npkg.amount)||0})});
+      const saved=await r.json();
+      if(!r.ok||!saved._id){alert("Template save nahi hua: "+(saved.error||"server error"));}
+      else{setTemplates(t=>[saved,...t]);alert("✅ Template save ho gaya!");}
+    }catch(e){alert("Error saving template. Backend live hai?");}
+    setSavingTpl(false);
   };
 
   const saveTx=async()=>{
     if(!selP)return;
     setSavingTx(true);
     try{
+      // 1) keep the quick-reference copy on the patient (for the "Tx ✓" pill)
       await fetch(`${API}/api/patients/${selP._id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({treatment:tx})});
+      // 2) save a real TreatmentPlan record in the database (upsert)
+      if(txPlanId){
+        await fetch(`${API}/api/treatment-plans/${txPlanId}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({notes:tx,therapist:DOCS[0]})});
+      }else{
+        const r=await fetch(`${API}/api/treatment-plans`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({patientId:selP._id,therapist:DOCS[0],notes:tx,startDate:TODAY,status:"active"})});
+        const saved=await r.json();
+        if(saved&&saved._id)setTxPlanId(saved._id);
+      }
       setPatients(p=>p.map(x=>x._id===selP._id?{...x,treatment:tx}:x));
       setSelP(p=>({...p,treatment:tx}));
       setTxOk(true);setTimeout(()=>setTxOk(false),3000);
-    }catch(e){alert("Error saving.");}
+    }catch(e){alert("Error saving treatment plan.");}
     setSavingTx(false);
   };
 
@@ -516,6 +556,7 @@ export default function App(){
 
   // Earnings computation
   const earnings = useMemo(()=>{
+    const docNames=[...new Set(appts.filter(a=>a.status!=="cancelled").map(a=>a.therapist).filter(Boolean))];
     let list=appts.filter(a=>a.status!=="cancelled"&&(earningDoc==="all"||a.therapist===earningDoc));
     const now=new Date();
     if(earningPeriod==="today") list=list.filter(a=>a.date===TODAY);
@@ -530,7 +571,7 @@ export default function App(){
     const pending=list.filter(a=>a.payStatus==="pending").reduce((s,a)=>s+(a.amount||0),0);
     const clinic=list.filter(a=>a.payStatus==="clinic").reduce((s,a)=>s+(a.amount||0),0);
     // By doc
-    const byDoc=DOCS.map(d=>{const da=list.filter(a=>a.therapist===d);return{doc:d,count:da.length,total:da.reduce((s,a)=>s+(a.amount||0),0),paid:da.filter(a=>a.payStatus==="paid").reduce((s,a)=>s+(a.amount||0),0)};});
+    const byDoc=docNames.map(d=>{const da=list.filter(a=>a.therapist===d);return{doc:d,count:da.length,total:da.reduce((s,a)=>s+(a.amount||0),0),paid:da.filter(a=>a.payStatus==="paid").reduce((s,a)=>s+(a.amount||0),0)};});
     // Monthly
     const monthly={};
     appts.filter(a=>a.status!=="cancelled"&&(earningDoc==="all"||a.therapist===earningDoc)).forEach(a=>{
@@ -542,6 +583,12 @@ export default function App(){
     });
     return{total,paid,pending,clinic,count:list.length,byDoc,monthly:Object.values(monthly).sort((a,b)=>b.key.localeCompare(a.key)).slice(0,12)};
   },[appts,earningDoc,earningPeriod]);
+
+  const docList = useMemo(()=>{
+    const s=new Set(appts.map(a=>a.therapist).filter(Boolean));
+    if(!s.size)DOCS.forEach(d=>s.add(d));
+    return[...s];
+  },[appts]);
 
   // ── SHELL ──────────────────────────────────────────────────────────
   const date=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
@@ -715,6 +762,10 @@ export default function App(){
     }/>
     {showPkg&&<Card style={{border:`1px solid ${C.brandL}`,background:C.brandXL}}>
       <div style={{fontSize:12,fontWeight:600,color:C.brandD,marginBottom:12}}>📦 New Package</div>
+      {templates.length>0&&<div style={{marginBottom:12}}>
+        <Sel label="Quick-fill from saved template" value="" onChange={v=>{const t=templates.find(x=>x._id===v);applyTemplate(t);}}
+          opts={[{v:"",l:"— Choose a template —"},...templates.map(t=>({v:t._id,l:`${t.name} · ${t.totalSessions} sessions · ₹${t.price}`}))]} mb={0}/>
+      </div>}
       <Inp label="Package Name *" value={npkg.name} onChange={v=>setNpkg({...npkg,name:v})} placeholder="e.g. 10-Session Back Therapy"/>
       <div className="grid2">
         <Inp label="Total Sessions *" value={npkg.total} onChange={v=>setNpkg({...npkg,total:v})} type="number" mb={0}/>
@@ -724,6 +775,8 @@ export default function App(){
       <Sel label="Therapist" value={npkg.therapist} onChange={v=>setNpkg({...npkg,therapist:v})} opts={DOCS}/>
       <Inp label="Start Date" value={npkg.startDate} onChange={v=>setNpkg({...npkg,startDate:v})} type="date"/>
       <Btn label="Create Package" onClick={addPkg} variant="success" icon="✓"/>
+      <div style={{marginTop:8}}/>
+      <Btn label={savingTpl?"Saving…":"⭐ Save as reusable template"} onClick={saveTemplate} variant="ghost" loading={savingTpl}/>
     </Card>}
 
     {ldPkgs?<Spin/>:pkgs.length===0?<Card><Empty msg="No packages yet."/></Card>
@@ -891,7 +944,7 @@ export default function App(){
       </Card>
       <SecTitle title="By Therapist"/>
       <Card>
-        {DOCS.map(doc=>{
+        {docList.map(doc=>{
           const da=mAppts.filter(a=>a.therapist===doc);
           const dt=da.reduce((s,a)=>s+(a.amount||0),0);
           const dp=da.filter(a=>a.payStatus==="paid").reduce((s,a)=>s+(a.amount||0),0);
@@ -921,7 +974,7 @@ export default function App(){
     <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
       <div style={{flex:1,minWidth:140}}>
         <Sel label="Doctor" value={earningDoc} onChange={setEarningDoc}
-          opts={[{v:"all",l:"All Doctors"},...DOCS.map(d=>({v:d,l:d}))]} mb={0}/>
+          opts={[{v:"all",l:"All Doctors"},...docList.map(d=>({v:d,l:d}))]} mb={0}/>
       </div>
       <div style={{flex:1,minWidth:140}}>
         <Sel label="Period" value={earningPeriod} onChange={setEarningPeriod}

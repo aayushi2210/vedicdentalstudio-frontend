@@ -14,9 +14,9 @@ const C = {
   r:"10px",rSm:"6px",rFull:"9999px",
 };
 
-const API     = "https://physioclinic-whatsapp-bot.onrender.com";
-const DOCS    = ["Dr. Shaily Ujjwal"];   // single dentist — apna naam yahan daalein
-const DCOL    = {"Dr. Shaily Ujjwal":C.brand};
+const API     = "https://vedic-dental-studio-backend.onrender.com";
+const DOCS    = ["Dr. Shailly Ujjwal"];   // single dentist — must EXACTLY match DOCTOR_NAME env on backend
+const DCOL    = {"Dr. Shailly Ujjwal":C.brand};
 const TIMES   = ["10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30","20:00"];
 const TYPES   = ["Consultation","Wisdom Tooth Removal","Dental Filling","Root Canal","Braces And Aligners","Dental Implant","Bridges And Crown","Mouth Ulcer","Kids Dentistry"];
 const PRICES  = {"Consultation":500,"Wisdom Tooth Removal":2000,"Dental Filling":3000,"Root Canal":4000,"Braces And Aligners":5000,"Dental Implant":5000,"Bridges And Crown":5000,"Mouth Ulcer":5000,"Kids Dentistry":5000};
@@ -137,30 +137,6 @@ const ACard=({a,onMarkPaid})=>{
     </Card>
   );
 };
-// Monthly trend bar chart (#14) — no external library
-const Trend=({title,data,valueKey,color=C.brand,money})=>{
-  const max=Math.max(1,...data.map(d=>d[valueKey]||0));
-  const W=520,H=160,pad=26,bw=data.length?(W-pad*2)/data.length:0;
-  const fmt=v=>money?`₹${(v/1000).toFixed(v>=1000?1:0)}${v>=1000?"k":""}`:v;
-  return (
-    <Card style={{marginBottom:14}}>
-      <div style={{fontSize:12,fontWeight:600,color:C.ink2,marginBottom:8}}>{title}</div>
-      {data.length===0?<Empty msg="No data yet"/>:
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto"}}>
-        <line x1={pad} y1={H-pad} x2={W-4} y2={H-pad} stroke={C.border}/>
-        {data.map((d,i)=>{
-          const v=d[valueKey]||0,h=((H-pad*2)*v)/max,x=pad+i*bw+bw*0.2,y=H-pad-h;
-          return (<g key={i}>
-            <rect x={x} y={y} width={bw*0.6} height={Math.max(h,1)} rx="4" fill={color}/>
-            <text x={x+bw*0.3} y={y-5} textAnchor="middle" fontSize="10" fill={C.ink3}>{fmt(v)}</text>
-            <text x={x+bw*0.3} y={H-pad+13} textAnchor="middle" fontSize="9" fill={C.ink4}>{d.month}</text>
-          </g>);
-        })}
-      </svg>}
-    </Card>
-  );
-};
-
 const Btn=({label,onClick,variant="primary",icon,loading,full=true,sm})=>{
   const p=sm?"7px 13px":"10px 16px",fs=sm?12:13;
   const vs={primary:{bg:C.brand,c:"#fff",sh:`0 2px 8px ${C.brand}35`},success:{bg:C.green,c:"#fff",sh:`0 2px 8px ${C.green}35`},dark:{bg:C.ink,c:"#fff",sh:"0 2px 8px rgba(0,0,0,.2)"},ghost:{bg:"transparent",c:C.ink2,sh:"none",bo:`1px solid ${C.border}`},danger:{bg:C.redL,c:C.redD,sh:"none"},amber:{bg:C.amberL,c:C.amberD,sh:"none"}};
@@ -315,6 +291,7 @@ const Shell=({children,hdr,isDesktop,tab,go})=>(
       {hdr}
       <div style={{padding:isDesktop?"20px 24px":"12px 14px",paddingBottom:isDesktop?"20px":"82px",flex:1,overflowY:"auto"}}>
         {children}
+        <div style={{textAlign:"center",fontSize:11,color:C.ink4,padding:"18px 0 6px",marginTop:8}}>© {new Date().getFullYear()} Nexoraa Technologies. All rights reserved.</div>
       </div>
     </div>
     {!isDesktop&&<BottomNav tab={tab} go={go}/>}
@@ -333,7 +310,6 @@ export default function App(){
   const [patients,  setPatients]  = useState([]);
   const [appts,     setAppts]     = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
-  const [stats,     setStats]     = useState([]);   // monthly trends (#14)
   const [loading,   setLoading]   = useState(true);
   const [refresh,   setRefresh]   = useState(null);
   const [sending,   setSending]   = useState(false);
@@ -386,7 +362,6 @@ export default function App(){
       setPatients(await pR.json());
       setAppts(await aR.json());
       setFeedbacks(await fR.json());
-      try{const sR=await fetch(`${API}/api/stats/monthly`);setStats(await sR.json());}catch(e){setStats([]);}
       setRefresh(new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}));
     }catch(e){console.error(e);}
     setLoading(false);
@@ -541,8 +516,7 @@ export default function App(){
 
   // Earnings computation
   const earnings = useMemo(()=>{
-    const docFilter = earningDoc==="all"?DOCS:[earningDoc];
-    let list=appts.filter(a=>a.status!=="cancelled"&&docFilter.includes(a.therapist));
+    let list=appts.filter(a=>a.status!=="cancelled"&&(earningDoc==="all"||a.therapist===earningDoc));
     const now=new Date();
     if(earningPeriod==="today") list=list.filter(a=>a.date===TODAY);
     else if(earningPeriod==="week"){
@@ -559,7 +533,7 @@ export default function App(){
     const byDoc=DOCS.map(d=>{const da=list.filter(a=>a.therapist===d);return{doc:d,count:da.length,total:da.reduce((s,a)=>s+(a.amount||0),0),paid:da.filter(a=>a.payStatus==="paid").reduce((s,a)=>s+(a.amount||0),0)};});
     // Monthly
     const monthly={};
-    appts.filter(a=>a.status!=="cancelled"&&docFilter.includes(a.therapist)).forEach(a=>{
+    appts.filter(a=>a.status!=="cancelled"&&(earningDoc==="all"||a.therapist===earningDoc)).forEach(a=>{
       if(!a.date)return;
       const k=a.date.slice(0,7);
       if(!monthly[k])monthly[k]={key:k,total:0,paid:0};
@@ -594,13 +568,6 @@ export default function App(){
           {sending?<span style={{animation:"pulse 1.2s ease infinite"}}>Sending…</span>:"Send Now"}
         </button>
       </Card>
-
-      {stats.length>0&&<>
-        <SecTitle title="Monthly Trends"/>
-        <Trend title="Appointments · last 6 months" data={stats} valueKey="appointments" color={C.brand}/>
-        <Trend title="Revenue · last 6 months" data={stats} valueKey="revenue" color={C.green} money/>
-        <Trend title="New patients · last 6 months" data={stats} valueKey="newPatients" color={C.purple}/>
-      </>}
 
       <SecTitle title={`Today's Appointments · ${todayA.length}`}/>
       {todayA.length===0?<Card><Empty msg="No appointments today"/></Card>
@@ -803,7 +770,6 @@ export default function App(){
         </Card>
       ))
     }
-    <div style={{fontSize:10,color:C.ink4,margin:"-2px 2px 10px"}}>🔒 Har view ke liye 5-min ka secure link banta hai — koi public URL leak nahi hota.</div>
 
     <SecTitle title={`Appointment History · ${patAppts(selP._id).length}`}/>
     {patAppts(selP._id).length===0?<Card><Empty msg="No appointments yet"/></Card>

@@ -15,6 +15,7 @@ const C = {
 };
 
 const API     = "https://vedic-dental-studio-backend.onrender.com";
+const APP_VERSION = "v1.0.0";
 const DOCS    = ["Dr. Shailly Ujjwal"];   // single dentist — must EXACTLY match DOCTOR_NAME env on backend
 const DCOL    = {"Dr. Shailly Ujjwal":C.brand};
 const TIMES   = ["10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30","20:00"];
@@ -247,7 +248,7 @@ const Sidebar=({tab,go})=>(
       })}
     </div>
     <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.07)"}}>
-      <div style={{fontSize:11,color:"rgba(255,255,255,.3)"}}>Vedic Dental Studio</div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.3)"}}>{APP_VERSION}</div>
     </div>
   </div>
 );
@@ -328,6 +329,7 @@ export default function App(){
   const [templates,setTemplates]= useState([]);     // package template catalog
   const [savingTpl,setSavingTpl]= useState(false);
   const [pkgs,     setPkgs]     = useState([]);
+  const [allPkgs,  setAllPkgs]  = useState([]);   // all packages (for earnings)
   const [ldPkgs,   setLdPkgs]   = useState(false);
   const [docs,     setDocs]     = useState([]);   // patient documents (#8)
   const [ldDocs,   setLdDocs]   = useState(false);
@@ -365,6 +367,7 @@ export default function App(){
       setPatients(await pR.json());
       setAppts(await aR.json());
       setFeedbacks(await fR.json());
+      try{const kR=await fetch(`${API}/api/packages`);const k=await kR.json();if(Array.isArray(k))setAllPkgs(k);}catch(e){}
       setRefresh(new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}));
     }catch(e){console.error(e);}
     setLoading(false);
@@ -426,6 +429,19 @@ export default function App(){
       const d=await r.json();
       setPkgs(p=>p.map(x=>x._id===pkg._id?d.updated:x));
     }catch(e){alert("Error. Check connection.");}
+    setMarkPkg(null);
+  };
+
+  const markPkgPaid=async(pkg)=>{
+    setMarkPkg(pkg._id);
+    try{
+      const r=await fetch(`${API}/api/packages/${pkg._id}/mark-paid`,{method:"POST"});
+      const d=await r.json();
+      if(d.updated){
+        setPkgs(p=>p.map(x=>x._id===pkg._id?d.updated:x));
+        setAllPkgs(p=>p.map(x=>x._id===pkg._id?d.updated:x));
+      }
+    }catch(e){alert("Error marking paid.");}
     setMarkPkg(null);
   };
 
@@ -572,6 +588,21 @@ export default function App(){
     const clinic=list.filter(a=>a.payStatus==="clinic").reduce((s,a)=>s+(a.amount||0),0);
     // By doc
     const byDoc=docNames.map(d=>{const da=list.filter(a=>a.therapist===d);return{doc:d,count:da.length,total:da.reduce((s,a)=>s+(a.amount||0),0),paid:da.filter(a=>a.payStatus==="paid").reduce((s,a)=>s+(a.amount||0),0)};});
+    // (#10) category split — consultation / follow-up / other / sessions(packages), per doctor
+    const inPeriod=ds=>{if(!ds)return earningPeriod==="all";if(earningPeriod==="all")return true;if(earningPeriod==="today")return ds===TODAY;if(earningPeriod==="week"){const w=new Date();w.setDate(new Date().getDate()-7);return ds>=w.toISOString().split("T")[0];}if(earningPeriod==="month")return ds.startsWith(TODAY.slice(0,7));return true;};
+    const catOf=t=>{const s=(t||"").toLowerCase();if(s.includes("follow")||s.includes("review"))return"followup";if(s.includes("consult"))return"consultation";return"other";};
+    const paidList=list.filter(a=>a.payStatus==="paid");
+    const pkgPaid=(allPkgs||[]).filter(p=>p.payStatus==="paid"&&(earningDoc==="all"||p.therapist===earningDoc)&&inPeriod(p.paidAt?String(p.paidAt).split("T")[0]:p.startDate));
+    const cat={consultation:0,followup:0,other:0,session:pkgPaid.reduce((s,p)=>s+(p.amount||0),0)};
+    paidList.forEach(a=>{cat[catOf(a.type)]+=(a.amount||0);});
+    const byDocCat=docNames.map(d=>{
+      const da=paidList.filter(a=>a.therapist===d), dp=pkgPaid.filter(p=>p.therapist===d);
+      const sess=dp.reduce((s,p)=>s+(p.amount||0),0);
+      const cons=da.filter(a=>catOf(a.type)==="consultation").reduce((s,a)=>s+(a.amount||0),0);
+      const fu=da.filter(a=>catOf(a.type)==="followup").reduce((s,a)=>s+(a.amount||0),0);
+      const oth=da.filter(a=>catOf(a.type)==="other").reduce((s,a)=>s+(a.amount||0),0);
+      return{doc:d,consultation:cons,followup:fu,other:oth,session:sess,total:cons+fu+oth+sess};
+    }).filter(x=>x.total>0);
     // Monthly
     const monthly={};
     appts.filter(a=>a.status!=="cancelled"&&(earningDoc==="all"||a.therapist===earningDoc)).forEach(a=>{
@@ -581,8 +612,8 @@ export default function App(){
       monthly[k].total+=(a.amount||0);
       if(a.payStatus==="paid")monthly[k].paid+=(a.amount||0);
     });
-    return{total,paid,pending,clinic,count:list.length,byDoc,monthly:Object.values(monthly).sort((a,b)=>b.key.localeCompare(a.key)).slice(0,12)};
-  },[appts,earningDoc,earningPeriod]);
+    return{total,paid,pending,clinic,count:list.length,byDoc,cat,byDocCat,sessionPaid:cat.session,monthly:Object.values(monthly).sort((a,b)=>b.key.localeCompare(a.key)).slice(0,12)};
+  },[appts,allPkgs,earningDoc,earningPeriod]);
 
   const docList = useMemo(()=>{
     const s=new Set(appts.map(a=>a.therapist).filter(Boolean));
@@ -788,7 +819,10 @@ export default function App(){
             <div style={{flex:1,paddingRight:10,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:600,color:C.ink}}>{pkg.name}</div>
               <div style={{fontSize:11,color:C.ink3,marginTop:2}}><span style={{color:DCOL[pkg.therapist]||C.brand,fontWeight:500}}>{pkg.therapist}</span>{pkg.startDate&&` · ${pkg.startDate}`}</div>
-              {pkg.amount>0&&<div style={{fontSize:11,fontWeight:600,color:C.greenD,marginTop:2}}>₹{pkg.amount.toLocaleString()}</div>}
+              {pkg.amount>0&&<div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
+                <span style={{fontSize:11,fontWeight:600,color:C.greenD}}>₹{pkg.amount.toLocaleString()}</span>
+                <span style={{fontSize:9,fontWeight:700,padding:"1px 7px",borderRadius:C.rFull,background:pkg.payStatus==="paid"?C.greenL:C.amberL,color:pkg.payStatus==="paid"?C.greenD:C.amberD}}>{pkg.payStatus==="paid"?"PAID":"PENDING"}</span>
+              </div>}
             </div>
             {sPill(pkg.active?"active":"completed")}
           </div>
@@ -796,6 +830,10 @@ export default function App(){
           {pkg.active&&<button onClick={()=>markSession(pkg)} disabled={markPkg===pkg._id||rem===0}
             style={{marginTop:10,width:"100%",background:rem===0?"#F3F4F6":`linear-gradient(to right,${C.green},#10B981)`,color:rem===0?C.ink3:"#fff",border:"none",borderRadius:C.r,padding:"10px 0",fontSize:12,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:7,boxShadow:rem===0?"none":`0 2px 8px ${C.green}30`,opacity:markPkg===pkg._id?.7:1,transition:"all .15s"}}>
             {markPkg===pkg._id?<span style={{animation:"pulse 1.2s ease infinite"}}>Marking…</span>:rem===0?"✓ All Sessions Done":<>✓ Mark Today's Session Done <span style={{background:"rgba(255,255,255,.2)",padding:"1px 8px",borderRadius:C.rFull,fontSize:10}}>{rem} left</span></>}
+          </button>}
+          {pkg.amount>0&&pkg.payStatus!=="paid"&&<button onClick={()=>markPkgPaid(pkg)} disabled={markPkg===pkg._id}
+            style={{marginTop:8,width:"100%",background:C.brandL,color:C.brandD,border:`1px solid ${C.brand}33`,borderRadius:C.r,padding:"9px 0",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+            💳 Mark Package Paid (₹{pkg.amount.toLocaleString()})
           </button>}
         </Card>;
       })
@@ -988,6 +1026,34 @@ export default function App(){
         <SC label="At Clinic"     value={`₹${earnings.clinic.toLocaleString()}`}   sub="to collect" icon="🏥" color={C.amber}/>
         <SC label="Pending"       value={`₹${earnings.pending.toLocaleString()}`}  sub="outstanding" icon="⚠️" color={C.red}/>
       </div>
+
+      {/* (#9 + #10) Revenue by service — collected, including paid packages */}
+      <SecTitle title="Collected by Service"/>
+      <div className={isDesktop?"grid4":"grid2"} style={{marginBottom:14}}>
+        <SC label="Consultation" value={`₹${earnings.cat.consultation.toLocaleString()}`} sub="paid" icon="🩺" color={C.brand}/>
+        <SC label="Follow-up"    value={`₹${earnings.cat.followup.toLocaleString()}`}     sub="paid" icon="🔁" color={C.purple}/>
+        <SC label="Sessions"     value={`₹${earnings.cat.session.toLocaleString()}`}      sub="packages paid" icon="📦" color={C.green}/>
+        <SC label="Other"        value={`₹${earnings.cat.other.toLocaleString()}`}        sub="paid" icon="🦷" color={C.ink}/>
+      </div>
+
+      {earnings.byDocCat.length>0&&<>
+        <SecTitle title="By Doctor · Service-wise (collected)"/>
+        {earnings.byDocCat.map(d=>(
+          <Card key={d.doc} style={{marginBottom:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <div style={{width:8,height:8,borderRadius:C.rFull,background:DCOL[d.doc]||C.brand}}/>
+              <div style={{fontSize:13,fontWeight:700,color:C.ink,flex:1}}>{d.doc}</div>
+              <div style={{fontSize:13,fontWeight:700,color:C.greenD}}>₹{d.total.toLocaleString()}</div>
+            </div>
+            {[{l:"🩺 Consultation",v:d.consultation},{l:"🔁 Follow-up",v:d.followup},{l:"📦 Sessions",v:d.session},{l:"🦷 Other",v:d.other}].map(r=>(
+              <div key={r.l} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:12,borderTop:`1px solid ${C.border}`}}>
+                <span style={{color:C.ink2}}>{r.l}</span>
+                <span style={{fontWeight:600,color:r.v>0?C.ink:C.ink4}}>₹{r.v.toLocaleString()}</span>
+              </div>
+            ))}
+          </Card>
+        ))}
+      </>}
 
       {/* Doctor breakdown */}
       <SecTitle title="Doctor-wise Earnings"/>

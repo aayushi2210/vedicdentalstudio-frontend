@@ -721,14 +721,16 @@ export default function App(){
     {loading?<Spin/>:<>
       <div style={{display:isDesktop?"grid":"block",gridTemplateColumns:isDesktop?"1fr 1fr 1fr":"none",gap:10}}>
         {filtPats.slice(pPatients*PER,(pPatients+1)*PER).map(p=>{
-          const visits=patAppts(p._id).length;
+          const pa=patAppts(p._id);
+          const visits=pa.length;
+          const visitReason=pa.map(a=>a.reason).filter(Boolean)[0]||p.condition;
           return <Card key={p._id} onClick={()=>{setSelP(p);setScreen("detail");}} mb={isDesktop?0:8}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <Avatar name={p.name} size={38}/>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,fontWeight:600,color:C.ink}}>{p.name}</div>
                 <div style={{fontSize:11,color:C.ink3,marginTop:2}}>📱 {p.phone}</div>
-                {p.condition&&<div style={{fontSize:11,color:C.brand,fontWeight:500,marginTop:2}}>🩺 {p.condition}</div>}
+                {visitReason&&<div style={{fontSize:11,color:C.brand,fontWeight:500,marginTop:2}}>🦷 {visitReason}</div>}
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end",flexShrink:0}}>
                 {p.treatment&&<Pill label="Tx ✓" bg={C.greenL} color={C.greenD}/>}
